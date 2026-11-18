@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Products')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+  <p id="flash" class="flash" role="status" th:if="${message}" th:text="${message}"></p>
+  <form method="get" action="/products" class="search" role="search">
+    <input id="search-input" name="q" th:value="${q}" placeholder="Search products" aria-label="Search products">
+    <button type="submit" th:id="${redesign} ? 'find-btn' : 'search-button'"
+            th:text="${redesign} ? 'Find' : 'Search'">Search</button>
+  </form>
+  <table id="products">
+    <thead><tr><th>Product</th><th>Description</th><th>Price</th><th>In stock</th><th></th></tr></thead>
+    <tbody>
+    <tr th:each="p : ${products}" data-testid="product-row" th:attr="data-product-id=${p.id}">
+      <td class="name" th:text="${p.name}"></td>
+      <td class="description" th:text="${p.description}"></td>
+      <td class="price" th:text="${p.price}"></td>
+      <td class="stock" th:text="${p.stock}"></td>
+      <td>
+        <form method="post" action="/cart/add">
+          <input type="hidden" name="productId" th:value="${p.id}">
+          <button type="submit" class="add-to-cart" th:attr="data-testid='add-to-cart-' + ${p.id}"
+                  th:disabled="${p.stock == 0}">Add to cart</button>
+        </form>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+  <p id="no-results" th:if="${#lists.isEmpty(products)}">No products found.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Log in')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main class="card narrow">
+  <h1 th:text="${redesign} ? 'Welcome back' : 'Log in'">Log in</h1>
+  <p id="login-error" class="error" role="alert" th:if="${error}" th:text="${error}"></p>
+  <form method="post" action="/login">
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit" th:id="${redesign} ? 'signin-btn' : 'login-button'"
+            th:text="${redesign} ? 'Sign in' : 'Log in'">Log in</button>
+  </form>
+  <p class="hint">Demo users: alice / alice123 · bob / bob123</p>
+</main>
+</body>
+</html>

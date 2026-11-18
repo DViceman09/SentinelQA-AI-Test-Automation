@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Cart')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+  <h1>Your cart</h1>
+  <p id="cart-error" class="error" role="alert" th:if="${error}" th:text="${error}"></p>
+  <p id="cart-empty" th:if="${#lists.isEmpty(lines)}">Your cart is empty.</p>
+  <th:block th:unless="${#lists.isEmpty(lines)}">
+    <table id="cart">
+      <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+      <tbody>
+      <tr th:each="l : ${lines}" data-testid="cart-row">
+        <td class="name" th:text="${l.product.name}"></td>
+        <td class="qty" th:text="${l.quantity}"></td>
+        <td class="price" th:text="${l.product.price}"></td>
+        <td class="subtotal" th:text="${l.subtotal}"></td>
+      </tr>
+      </tbody>
+    </table>
+    <p class="total">Total: <strong id="cart-total" th:text="${total}"></strong></p>
+    <form method="post" action="/checkout">
+      <button type="submit" th:id="${redesign} ? 'checkout-now' : 'place-order'"
+              th:text="${redesign} ? 'Checkout now' : 'Place order'">Place order</button>
+    </form>
+  </th:block>
+</main>
+</body>
+</html>

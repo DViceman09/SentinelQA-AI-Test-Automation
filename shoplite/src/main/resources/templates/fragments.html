@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' · ShopLite'">ShopLite</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header th:fragment="header" class="topbar">
+  <a href="/products" class="brand">ShopLite</a>
+  <nav th:if="${username}">
+    <a href="/products" id="nav-products">Products</a>
+    <a href="/cart" id="nav-cart">Cart (<span id="cart-count" th:text="${cartCount}">0</span>)</a>
+    <a href="/orders" id="nav-orders">Orders</a>
+    <span id="current-user" class="user" th:text="${username}">alice</span>
+    <form method="post" action="/logout" class="inline">
+      <button id="logout" type="submit" class="link">Log out</button>
+    </form>
+  </nav>
+</header>
+</body>
+</html>

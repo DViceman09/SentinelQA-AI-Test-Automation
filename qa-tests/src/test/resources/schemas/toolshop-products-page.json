@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": ["current_page", "per_page", "total", "data"],
+  "properties": {
+    "current_page": {"type": "integer", "minimum": 1},
+    "per_page": {"type": "integer", "minimum": 1},
+    "total": {"type": "integer", "minimum": 1},
+    "data": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "price", "in_stock", "category", "brand"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "price": {"type": "number", "minimum": 0},
+          "in_stock": {"type": "boolean"},
+          "category": {"type": "object", "required": ["name"]},
+          "brand": {"type": "object", "required": ["name"]}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+target/
+.env
+reports/
+strix_runs/
+.allure/
+.idea/
+*.iml
+.vscode/
+tools/

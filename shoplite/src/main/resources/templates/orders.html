@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Orders')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+  <h1>Your orders</h1>
+  <p id="no-orders" th:if="${#lists.isEmpty(orders)}">No orders yet.</p>
+  <table id="orders" th:unless="${#lists.isEmpty(orders)}">
+    <thead><tr><th>Order</th><th>Status</th><th>Total</th><th>Placed</th></tr></thead>
+    <tbody>
+    <tr th:each="o : ${orders}" data-testid="order-row">
+      <td><a th:href="@{/orders/{id}(id=${o.id})}" th:text="'#' + ${o.id}"></a></td>
+      <td th:text="${o.status}"></td>
+      <td th:text="${o.total}"></td>
+      <td th:text="${#temporals.format(o.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+    </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

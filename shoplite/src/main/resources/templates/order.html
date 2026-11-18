@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Order')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+  <h1>Order #<span id="order-id" th:text="${order.id}"></span></h1>
+  <p>Status: <strong id="order-status" th:text="${order.status}"></strong></p>
+  <table id="order-items">
+    <thead><tr><th>Product</th><th>Qty</th><th>Unit price</th></tr></thead>
+    <tbody>
+    <tr th:each="i : ${order.items}" data-testid="order-item">
+      <td th:text="${i.productName}"></td>
+      <td th:text="${i.quantity}"></td>
+      <td th:text="${i.unitPrice}"></td>
+    </tr>
+    </tbody>
+  </table>
+  <p class="total">Total: <strong id="order-total" th:text="${order.total}"></strong></p>
+</main>
+</body>
+</html>

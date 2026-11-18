@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.sentinelqa</groupId>
+  <artifactId>qa-tests</artifactId>
+  <version>1.0.0</version>
+  <name>SentinelQA functional, DB and security tests</name>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Surefire reads these; override with -Dparallel=none or -DthreadCount=8 -->
+    <parallel>methods</parallel>
+    <threadCount>4</threadCount>
+    <!-- Tests against the live third-party Toolshop site only run with -Plive (see profile below). -->
+    <excludedGroups>live</excludedGroups>
+    <allure.version>3.1.1</allure.version>
+    <langchain4j.version>1.23.0</langchain4j.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>4.53.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>7.12.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>6.3.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>6.3.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-testng</artifactId>
+      <version>${allure.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-rest-assured</artifactId>
+      <version>${allure.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.14</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+      <version>${langchain4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-open-ai</artifactId>
+      <version>${langchain4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.20</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.6.1</version>
+      </plugin>
+      <!-- ./mvnw -pl qa-tests allure:serve  (downloads its own Node runtime, nothing to install) -->
+      <plugin>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-maven</artifactId>
+        <version>3.1.0</version>
+      </plugin>
+      <!-- ./mvnw -pl qa-tests exec:java  -> AI drafts API tests from the OpenAPI spec -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+          <mainClass>com.sentinelqa.framework.ai.TestGenerator</mainClass>
+          <systemProperties>
+            <systemProperty>
+              <key>generator.out</key>
+              <value>${project.build.directory}/ai-generated</value>
+            </systemProperty>
+          </systemProperties>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- ./mvnw -pl qa-tests test -Plive  -> UI + API tests on https://practicesoftwaretesting.com (no app or DB needed) -->
+    <profile>
+      <id>live</id>
+      <properties>
+        <groups>live</groups>
+        <excludedGroups/>
+        <!-- Be a polite guest on someone else's server: at most 2 tests at a time. -->
+        <threadCount>2</threadCount>
+      </properties>
+    </profile>
+  </profiles>
+</project>

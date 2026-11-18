@@ -1,0 +1,84 @@
+# docker compose up -d --build --wait                      -> app + database
+# docker compose --profile grid up -d                       -> + Selenium Grid (Chrome, Firefox, Edge)
+# docker compose --profile security run --rm zap-baseline   -> OWASP ZAP passive scan
+# docker compose --profile security run --rm zap-api        -> OWASP ZAP active scan of the OpenAPI spec
+name: sentinelqa
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: shoplite
+      POSTGRES_USER: shoplite
+      POSTGRES_PASSWORD: shoplite
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shoplite -d shoplite"]
+      interval: 3s
+      retries: 20
+
+  shoplite:
+    build: ./shoplite
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shoplite
+      SHOPLITE_DEFECTS: ${SHOPLITE_DEFECTS:-false}
+      SHOPLITE_REDESIGN: ${SHOPLITE_REDESIGN:-false}
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/actuator/health || exit 1"]
+      interval: 5s
+      retries: 30
+
+  # ---- Selenium Grid: run UI tests with GRID_URL=http://localhost:4444 UI_BASE_URL=http://shoplite:8080
+  # Watch browsers live at http://localhost:7900 (chrome), 7901 (firefox), 7902 (edge); password: secret
+  selenium-hub:
+    image: selenium/hub:4.52.0
+    profiles: [grid]
+    ports: ["4444:4444"]
+
+  chrome:
+    image: selenium/node-chrome:4.52.0
+    profiles: [grid]
+    shm_size: 2gb
+    depends_on: [selenium-hub]
+    environment: &node
+      SE_EVENT_BUS_HOST: selenium-hub
+      SE_EVENT_BUS_PUBLISH_PORT: "4442"
+      SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
+      SE_NODE_MAX_SESSIONS: "2"
+    ports: ["7900:7900"]
+
+  firefox:
+    image: selenium/node-firefox:4.52.0
+    profiles: [grid]
+    shm_size: 2gb
+    depends_on: [selenium-hub]
+    environment: *node
+    ports: ["7901:7900"]
+
+  edge:
+    image: selenium/node-edge:4.52.0
+    profiles: [grid]
+    shm_size: 2gb
+    depends_on: [selenium-hub]
+    environment: *node
+    ports: ["7902:7900"]
+
+  # ---- OWASP ZAP: reports land in ./reports/zap. "-I" = report warnings without failing the run.
+  zap-baseline:
+    image: zaproxy/zap-stable
+    profiles: [security]
+    depends_on:
+      shoplite: {condition: service_healthy}
+    volumes: ["./reports/zap:/zap/wrk:rw"]
+    command: zap-baseline.py -t http://shoplite:8080/login -r zap-baseline.html -J zap-baseline.json -I
+
+  zap-api:
+    image: zaproxy/zap-stable
+    profiles: [security]
+    depends_on:
+      shoplite: {condition: service_healthy}
+    volumes: ["./reports/zap:/zap/wrk:rw"]
+    command: zap-api-scan.py -t http://shoplite:8080/v3/api-docs -f openapi -r zap-api.html -J zap-api.json -I

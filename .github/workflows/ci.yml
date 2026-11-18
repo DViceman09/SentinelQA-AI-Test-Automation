@@ -1,0 +1,139 @@
+name: SentinelQA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 2 * * *" # nightly: load test + security scans
+  workflow_dispatch:
+    inputs:
+      stress:
+        description: Run the stress test (finds the breaking point)
+        type: boolean
+        default: false
+      strix:
+        description: Run the Strix AI pentest (uses LLM tokens)
+        type: boolean
+        default: false
+      live:
+        description: Run the UI + API suite against the live Toolshop site (practicesoftwaretesting.com)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # Optional: set these repository secrets to switch on AI triage / self-healing / Strix.
+  AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+  AI_API_KEY: ${{ secrets.AI_API_KEY }}
+  AI_MODEL: ${{ secrets.AI_MODEL }}
+
+jobs:
+  functional:
+    name: UI + API + DB + security regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: "21", cache: maven}
+      - name: Start ShopLite + PostgreSQL
+        run: docker compose up -d --build --wait
+      - name: Run tests (headless Chrome)
+        run: bash ./mvnw -B -pl qa-tests test
+      - name: Build Allure report
+        if: always()
+        run: bash ./mvnw -B -pl qa-tests allure:report
+      - name: AI triage + self-healing summary
+        if: always()
+        run: cat qa-tests/target/ai-triage-report.md qa-tests/target/self-healing-report.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: allure-report, path: qa-tests/target/site/allure-maven-plugin}
+
+  # Tests that never fail prove nothing: with the planted defects switched on, the suite MUST go red.
+  defects-are-caught:
+    name: Planted defects are detected
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: "21", cache: maven}
+      - run: docker compose up -d --build --wait
+        env: {SHOPLITE_DEFECTS: "true"}
+      - name: Security + DB suites must fail
+        run: |
+          if bash ./mvnw -B -pl qa-tests test -Dgroups=security,db; then
+            echo "::error::Planted defects were NOT detected - the tests have lost their teeth"; exit 1
+          fi
+          echo "Planted SQL injection, IDOR, missing headers and stock bug were all detected."
+
+  # On demand only: a third-party site's outage must never turn our pipeline red.
+  live-site:
+    name: Live site (Toolshop) UI + API
+    if: github.event_name == 'workflow_dispatch' && inputs.live
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: "21", cache: maven}
+      - run: bash ./mvnw -B -pl qa-tests test -Plive
+      - run: bash ./mvnw -B -pl qa-tests allure:report
+        if: always()
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: allure-report-live, path: qa-tests/target/site/allure-maven-plugin}
+
+  performance:
+    name: Load (SLA gate) + optional stress
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: "21", cache: maven}
+      - run: docker compose up -d --build --wait
+      - name: Load test
+        run: bash ./mvnw -B -pl perf-tests test -Dtest=LoadTest -Dperf.users=20 -Dperf.holdSeconds=60
+      - name: Stress test
+        if: inputs.stress
+        run: |
+          bash ./mvnw -B -pl perf-tests test -Dtest=StressTest
+          cat perf-tests/target/stress-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: jmeter-reports, path: perf-tests/target/jmeter-reports}
+
+  security-scans:
+    name: OWASP ZAP + Trivy
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose up -d --build --wait && mkdir -p reports/zap && chmod 777 reports/zap
+      - run: docker compose --profile security run --rm zap-baseline
+      - run: docker compose --profile security run --rm zap-api
+      - name: Dependency and container CVE scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, pinned by SHA
+        with: {scan-type: fs, scan-ref: ., severity: "CRITICAL,HIGH", format: table, output: reports/trivy.txt}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: security-reports, path: reports}
+
+  strix:
+    name: Strix AI pentest
+    if: github.event_name == 'workflow_dispatch' && inputs.strix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose up -d --build --wait
+      - run: curl -sSL https://strix.ai/install | bash
+      - name: Run Strix (white-box + black-box)
+        run: bash ./security/strix.sh
+        env:
+          TARGET_URL: http://172.17.0.1:8080 # Docker bridge gateway = the runner host
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: {name: strix-findings, path: strix_runs}
