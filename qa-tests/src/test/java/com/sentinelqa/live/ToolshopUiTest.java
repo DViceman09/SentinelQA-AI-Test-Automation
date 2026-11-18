@@ -151,7 +151,7 @@ public class ToolshopUiTest extends BaseUiTest {
 
     @Test(description = "Toolshop: a wrong password is refused with a clear message")
     public void wrongPasswordIsRefused() {
-        String error = new ToolshopLoginPage().open().loginExpectingError(Toolshop.EMAIL, "not-the-password");
+        String error = new ToolshopLoginPage().open().loginExpectingError(Toolshop.WRONG_PASSWORD_EMAIL, "not-the-password");
 
         assertEquals(error, "Invalid email or password");
     }

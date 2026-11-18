@@ -142,9 +142,9 @@ public class ToolshopApiTest {
     @DataProvider
     public Object[][] invalidLogins() {
         return new Object[][] {
-                {"wrong password", Map.of("email", Toolshop.EMAIL, "password", "not-the-password")},
+                {"wrong password", Map.of("email", Toolshop.WRONG_PASSWORD_EMAIL, "password", "not-the-password")},
                 {"unknown email", Map.of("email", "nobody@example.com", "password", Toolshop.PASSWORD)},
-                {"empty password", Map.of("email", Toolshop.EMAIL, "password", "")},
+                {"empty password", Map.of("email", Toolshop.WRONG_PASSWORD_EMAIL, "password", "")},
                 {"empty body", Map.of()},
         };
     }

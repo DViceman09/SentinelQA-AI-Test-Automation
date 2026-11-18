@@ -489,8 +489,11 @@ sequenceDiagram
 
 **Ground rules for testing a site we don't own:** functional tests only, at a human pace (at most 2 tests at a time). **No load or security
 scans.** The data is shared with everyone practising on the site, so tests assert *rules*, never exact catalogue
-contents. The `live` group is excluded from the default run and runs in CI on demand only, so a third-party outage
-can't turn our pipeline red. (Sites like Amazon are deliberately not used: their terms ban automated access.)
+contents. Wrong-password tests use a second demo account, because Toolshop locks an account after failed logins and
+the happy-path tests need theirs. The `live` group is excluded from the default run and runs in CI on demand only, so a
+third-party outage can't turn our pipeline red. In CI only the API suite runs: Cloudflare shows browsers from datacenter
+IPs a "verify you are human" page, and getting past bot protection is exactly what we don't do, so the UI suite runs
+from a normal connection. (Sites like Amazon are deliberately not used: their terms ban automated access.)
 
 <details>
 <summary><b>📋 Full test catalogue (98 test methods → 152 test cases)</b></summary>
@@ -613,7 +616,7 @@ flowchart LR
     N --> J4["security-scans<br/>ZAP + Trivy"]
     M --> J4
     M -.->|"strix input"| J5["strix<br/>AI pentest"]
-    M -.->|"live input"| J6["live-site<br/>Toolshop UI + API"]
+    M -.->|"live input"| J6["live-site<br/>Toolshop API"]
     J1 --> A1[("Allure report<br/>+ AI triage summary")]
     J3 --> A2[("JMeter dashboard<br/>+ stress table")]
     J4 --> A3[("ZAP + Trivy reports")]
@@ -628,7 +631,7 @@ flowchart LR
 | Load (+ optional stress) | Nightly / manual | p95 and error-rate SLA. Stress capacity table in the job summary |
 | OWASP ZAP + Trivy | Nightly / manual | Reports uploaded as artifacts |
 | Strix AI pentest | Manual | Findings uploaded as an artifact |
-| Live site (Toolshop) | Manual | Must pass. Allure report uploaded |
+| Live site (Toolshop) API | Manual | Must pass. Allure report uploaded. The live UI suite runs locally (Cloudflare challenges datacenter browsers) |
 
 Optional repository secrets: `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, `STRIX_LLM`. Without them, CI runs with AI off.
 Third-party actions are pinned (Trivy by commit SHA), and the workflow runs with `contents: read` permissions only.

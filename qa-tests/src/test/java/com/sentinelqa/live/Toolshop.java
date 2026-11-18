@@ -20,6 +20,9 @@ public final class Toolshop {
     // Public demo account, published on the site itself.
     public static final String EMAIL = "customer@practicesoftwaretesting.com";
     public static final String PASSWORD = "welcome01";
+    // Second public demo account, used only for wrong-password tests: Toolshop locks an account (423) after failed
+    // logins, and the happy-path tests must keep working on EMAIL.
+    public static final String WRONG_PASSWORD_EMAIL = "customer2@practicesoftwaretesting.com";
 
     private Toolshop() {}
 
